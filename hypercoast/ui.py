@@ -13,11 +13,12 @@ import numpy as np
 import xarray as xr
 from bqplot import pyplot as plt
 from ipyfilechooser import FileChooser
-from .pace import extract_pace
-from .desis import extract_desis
-from .neon import extract_neon
-from .aviris import extract_aviris
-from .common import extract_spectral
+from pace import extract_pace
+from desis import extract_desis
+from neon import extract_neon
+from aviris import extract_aviris
+from EnMAP import extract_EnMAP
+from common import extract_spectral
 
 
 class SpectralWidget(widgets.HBox):
@@ -227,6 +228,8 @@ class SpectralWidget(widgets.HBox):
 
                 elif self._host_map.cog_layer_dict[layer_name]["hyper"] == "DESIS":
                     da = extract_desis(ds, lat, lon)
+                elif self._host_map.cog_layer_dict[layer_name]["hyper"] == "EnMAP":
+                    da = extract_EnMAP(ds, lat, lon)
 
                 elif self._host_map.cog_layer_dict[layer_name]["hyper"] == "NEON":
                     da = extract_neon(ds, lat, lon)

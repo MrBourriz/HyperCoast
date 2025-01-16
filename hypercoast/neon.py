@@ -13,7 +13,7 @@ import rioxarray
 import numpy as np
 import xarray as xr
 from typing import List, Union, Dict, Optional, Tuple, Any
-from .common import convert_coords
+from common import convert_coords
 
 
 def list_neon_datasets(filepath: str, print_node: bool = False) -> None:

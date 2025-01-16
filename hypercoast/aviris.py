@@ -20,7 +20,7 @@ import rioxarray
 import numpy as np
 import xarray as xr
 from typing import List, Union, Optional, Any
-from .common import convert_coords
+from common import convert_coords
 
 
 def read_aviris(

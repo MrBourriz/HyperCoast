@@ -9,10 +9,10 @@ import leafmap
 import xarray as xr
 import numpy as np
 from typing import Union
-from .aviris import aviris_to_image, read_aviris, extract_aviris
-from .desis import desis_to_image, read_desis, extract_desis, filter_desis
+from aviris import aviris_to_image, read_aviris, extract_aviris
+from desis import desis_to_image, read_desis, extract_desis, filter_desis
 from EnMAP import read_EnMAP,EnMAP_to_image
-from .emit import (
+from emit import (
     emit_to_image,
     read_emit,
     plot_emit,
@@ -20,8 +20,8 @@ from .emit import (
     emit_to_netcdf,
     emit_to_image,
 )
-from .neon import neon_to_image, read_neon
-from .pace import (
+from neon import neon_to_image, read_neon
+from pace import (
     pace_to_image,
     read_pace,
     read_pace_aop,
@@ -37,8 +37,8 @@ from .pace import (
     pace_to_image,
     pace_chla_to_image,
 )
-from .ui import SpectralWidget
-from .common import (
+from ui import SpectralWidget
+from common import (
     download_file,
     search_datasets,
     search_nasa_data,
@@ -592,7 +592,7 @@ class Map(leafmap.Map):
         colormap="jet",
         vmin=None,
         vmax=None,
-        nodata=np.nan,
+        nodata=-32768,
         attribution=None,
         layer_name="EnMAP",
         zoom_to_layer=True,

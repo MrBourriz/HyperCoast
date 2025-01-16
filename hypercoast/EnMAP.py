@@ -27,7 +27,7 @@ def read_EnMAP(
         xr.Dataset: An xarray Dataset containing the EnMAP data.
     """
 
-    file_path_csv = r"D:\PhD_Thesis\Contributions\enmap_wavelengths_full.csv"
+    file_path_csv = r"D:\PhD_Thesis\testoo\enmap_wavelengths_full.csv"
     df = pd.read_csv(file_path_csv)
     dataset = xr.open_dataset(filepath)
     dataset = dataset.rename(
@@ -81,7 +81,87 @@ def EnMAP_to_image(
         dataset["reflectance"], output=output, transpose=False, **kwargs
     )
 
-path_enmap=r'D:\PhD_Thesis\Contributions\EnMAP.tif'
 
-dataset_enmap=read_EnMAP(path_enmap)
-print(dataset_enmap)
+def extract_EnMAP(ds: xr.Dataset, lat: float, lon: float) -> xr.DataArray:
+    """
+    Extracts EnMAP data from a given xarray Dataset.
+
+    Args:
+        ds (xarray.Dataset): The dataset containing the EnMAP data.
+        lat (float): The latitude of the point to extract.
+        lon (float): The longitude of the point to extract.
+
+    Returns:
+        xarray.DataArray: The extracted data.
+    """
+
+    crs = ds.attrs["crs"]
+
+    x, y = convert_coords([[lat, lon]], "epsg:4326", crs)[0]
+
+    values = ds.sel(x=x, y=y, method="nearest")["reflectance"].values / 10000
+
+    da = xr.DataArray(
+        values, dims=["wavelength"], coords={"wavelength": ds.coords["wavelength"]}
+    )
+
+    return da
+
+def filter_EnMAP(
+    dataset: xr.Dataset,
+    lat: Union[float, tuple],
+    lon: Union[float, tuple],
+    return_plot: Optional[bool] = False,
+    **kwargs,
+) -> xr.Dataset:
+    """
+    Filters a EnMAP dataset based on latitude and longitude.
+
+    Args:
+        dataset (xr.Dataset): The EnMAP dataset to filter.
+        lat (float or tuple): The latitude to filter by. If a tuple or list,
+            it represents a range.
+        lon (float or tuple): The longitude to filter by. If a tuple or
+            list, it represents a range.
+
+    Returns:
+        xr.DataArray: The filtered EnMAP data.
+    """
+
+    if isinstance(lat, list) or isinstance(lat, tuple):
+        min_lat = min(lat)
+        max_lat = max(lat)
+    else:
+        min_lat = lat
+        max_lat = lat
+
+    if isinstance(lon, list) or isinstance(lon, tuple):
+        min_lon = min(lon)
+        max_lon = max(lon)
+    else:
+        min_lon = lon
+        max_lon = lon
+
+    if min_lat == max_lat and min_lon == max_lon:
+        coords = [[min_lat, min_lon]]
+    else:
+        coords = [[min_lat, min_lon], [max_lat, max_lon]]
+    coords = convert_coords(coords, "epsg:4326", dataset.rio.crs.to_string())
+
+    if len(coords) == 1:
+        x, y = coords[0]
+        da = dataset.sel(x=x, y=y, method="nearest")["reflectance"]
+    else:
+        x_min, y_min = coords[0]
+        x_max, y_max = coords[1]
+        print(x_min, y_min, x_max, y_max)
+        da = dataset.sel(x=slice(x_min, x_max), y=slice(y_min, y_max))["reflectance"]
+
+    if return_plot:
+        rrs_stack = da.stack(
+            {"pixel": ["latitude", "longitude"]},
+            create_index=False,
+        )
+        rrs_stack.plot.line(hue="pixel", **kwargs)
+    else:
+        return da

@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Union, Optional, Any, Callable
-from .common import extract_date_from_filename
+from common import extract_date_from_filename
 
 
 def read_pace(
