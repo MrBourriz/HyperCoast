@@ -657,7 +657,7 @@ class Map(leafmap.Map):
     # Normalize reflectance values if necessary
         if source["reflectance"].max() > 1.0:
          source["reflectance"] = source["reflectance"] / 10000
-         
+
         image = EnMAP_to_image(source, wavelengths=wavelengths, method=method)
 
     # Dynamically determine vmin and vmax if not provided
@@ -684,7 +684,7 @@ class Map(leafmap.Map):
             colormap=colormap,
             vmin=vmin,
             vmax=vmax,
-            nodata=nodata,
+            nodata=0,
             attribution=attribution,
             layer_name=layer_name,
             zoom_to_layer=zoom_to_layer,
