@@ -637,13 +637,34 @@ class Map(leafmap.Map):
                 `array_to_memory_file` when reading the raster. Defaults to {}.
         """
         if array_args is None:
-            array_args = {}
+         array_args = {}
 
+    # Read the dataset
         if isinstance(source, str):
+         source = read_EnMAP(source)
 
-            source = read_EnMAP(source)
+    # Select specific wavelengths if provided
+        if wavelengths is not None:
+         source = source.sel(wavelength=wavelengths, method=method)
 
+    # Handle NaN and nodata values
+        nodata_value = -32768
+        source["reflectance"] = source["reflectance"].where(source["reflectance"] != nodata_value)
+
+    # Replace NaN values with 0 or any default value
+        source["reflectance"] = source["reflectance"].fillna(0)
+
+    # Normalize reflectance values if necessary
+        if source["reflectance"].max() > 1.0:
+         source["reflectance"] = source["reflectance"] / 10000
+         
         image = EnMAP_to_image(source, wavelengths=wavelengths, method=method)
+
+    # Dynamically determine vmin and vmax if not provided
+        if vmin is None:
+         vmin = float(source["reflectance"].min().values)
+        if vmax is None:
+         vmax = float(source["reflectance"].max().values)
 
         if isinstance(wavelengths, list) and len(wavelengths) > 1:
             colormap = None

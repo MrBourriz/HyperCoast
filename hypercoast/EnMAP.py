@@ -4,7 +4,6 @@ import pandas as pd
 from common import convert_coords
 from typing import Optional, Union
 
-
 def read_EnMAP(
     filepath: str,
     wavelengths: Optional[Union[list, tuple]] = None,
@@ -12,7 +11,7 @@ def read_EnMAP(
     **kwargs,
 ) -> xr.Dataset:
     """
-    Reads EnMAP data from a given file and returns an xarray Dataset.
+    Reads EnMAP data from a given file and returns an xarray Dataset with proper handling of no-data values.
 
     Args:
         filepath (str): Path to the file to read.
@@ -29,15 +28,31 @@ def read_EnMAP(
 
     file_path_csv = r"D:\PhD_Thesis\testoo\enmap_wavelengths_full.csv"
     df = pd.read_csv(file_path_csv)
+
+    # Open the dataset with scaling and masking enabled
     dataset = xr.open_dataset(filepath)
+
+    # Rename dimensions and variables for consistency
     dataset = dataset.rename(
         {"band": "wavelength", "band_data": "reflectance"}
     ).transpose("y", "x", "wavelength")
+
+    # Assign actual wavelengths from the CSV file
     dataset["wavelength"] = df["wavelength"].tolist()
 
+    # Mask invalid data (e.g., NaN or nodata values)
+    nodata_value = -32768
+    dataset = dataset.where(dataset != nodata_value)
+
+    # Normalize reflectance values if they are scaled (e.g., 0-10000)
+    if dataset["reflectance"].max() > 1.0:
+        dataset["reflectance"] = dataset["reflectance"] / 10000
+
+    # Select specific wavelengths if provided
     if wavelengths is not None:
         dataset = dataset.sel(wavelength=wavelengths, method=method, **kwargs)
 
+    # Set CRS information
     dataset.attrs["crs"] = dataset.rio.crs.to_string()
 
     return dataset
@@ -50,7 +65,7 @@ def EnMAP_to_image(
     **kwargs,
 ):
     """
-    Converts an EnMAP dataset to an image.
+    Converts an EnMAP dataset to an image with proper handling of NaN values.
 
     Args:
         dataset (xarray.Dataset or str): The dataset containing the EnMAP data
@@ -77,14 +92,16 @@ def EnMAP_to_image(
     if wavelengths is not None:
         dataset = dataset.sel(wavelength=wavelengths, method=method)
 
+    # Handle NaN values by setting them to 0 (or a colormap-ignored value)
+    dataset["reflectance"] = dataset["reflectance"].fillna(0)
+
     return array_to_image(
         dataset["reflectance"], output=output, transpose=False, **kwargs
     )
 
-
 def extract_EnMAP(ds: xr.Dataset, lat: float, lon: float) -> xr.DataArray:
     """
-    Extracts EnMAP data from a given xarray Dataset.
+    Extracts EnMAP data from a given xarray Dataset at a specific location.
 
     Args:
         ds (xarray.Dataset): The dataset containing the EnMAP data.
@@ -97,15 +114,15 @@ def extract_EnMAP(ds: xr.Dataset, lat: float, lon: float) -> xr.DataArray:
 
     crs = ds.attrs["crs"]
 
+    # Convert geographic coordinates to the dataset CRS
     x, y = convert_coords([[lat, lon]], "epsg:4326", crs)[0]
 
-    values = ds.sel(x=x, y=y, method="nearest")["reflectance"].values / 10000
+    # Extract the nearest pixel's reflectance values
+    values = ds.sel(x=x, y=y, method="nearest")["reflectance"].values
 
-    da = xr.DataArray(
+    return xr.DataArray(
         values, dims=["wavelength"], coords={"wavelength": ds.coords["wavelength"]}
     )
-
-    return da
 
 def filter_EnMAP(
     dataset: xr.Dataset,
@@ -115,7 +132,7 @@ def filter_EnMAP(
     **kwargs,
 ) -> xr.Dataset:
     """
-    Filters a EnMAP dataset based on latitude and longitude.
+    Filters an EnMAP dataset based on latitude and longitude.
 
     Args:
         dataset (xr.Dataset): The EnMAP dataset to filter.
@@ -128,40 +145,30 @@ def filter_EnMAP(
         xr.DataArray: The filtered EnMAP data.
     """
 
-    if isinstance(lat, list) or isinstance(lat, tuple):
-        min_lat = min(lat)
-        max_lat = max(lat)
+    if isinstance(lat, (list, tuple)):
+        min_lat, max_lat = min(lat), max(lat)
     else:
-        min_lat = lat
-        max_lat = lat
+        min_lat, max_lat = lat, lat
 
-    if isinstance(lon, list) or isinstance(lon, tuple):
-        min_lon = min(lon)
-        max_lon = max(lon)
+    if isinstance(lon, (list, tuple)):
+        min_lon, max_lon = min(lon), max(lon)
     else:
-        min_lon = lon
-        max_lon = lon
+        min_lon, max_lon = lon, lon
 
-    if min_lat == max_lat and min_lon == max_lon:
-        coords = [[min_lat, min_lon]]
-    else:
-        coords = [[min_lat, min_lon], [max_lat, max_lon]]
-    coords = convert_coords(coords, "epsg:4326", dataset.rio.crs.to_string())
+    # Convert lat/lon to dataset CRS
+    coords = convert_coords(
+        [[min_lat, min_lon], [max_lat, max_lon]], "epsg:4326", dataset.rio.crs.to_string()
+    )
 
     if len(coords) == 1:
         x, y = coords[0]
-        da = dataset.sel(x=x, y=y, method="nearest")["reflectance"]
+        filtered = dataset.sel(x=x, y=y, method="nearest")["reflectance"]
     else:
         x_min, y_min = coords[0]
         x_max, y_max = coords[1]
-        print(x_min, y_min, x_max, y_max)
-        da = dataset.sel(x=slice(x_min, x_max), y=slice(y_min, y_max))["reflectance"]
+        filtered = dataset.sel(x=slice(x_min, x_max), y=slice(y_min, y_max))["reflectance"]
 
     if return_plot:
-        rrs_stack = da.stack(
-            {"pixel": ["latitude", "longitude"]},
-            create_index=False,
-        )
-        rrs_stack.plot.line(hue="pixel", **kwargs)
+        filtered.stack({"pixel": ("y", "x")}).plot.line(hue="pixel", **kwargs)
     else:
-        return da
+        return filtered
