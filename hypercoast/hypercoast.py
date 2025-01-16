@@ -11,7 +11,7 @@ import numpy as np
 from typing import Union
 from aviris import aviris_to_image, read_aviris, extract_aviris
 from desis import desis_to_image, read_desis, extract_desis, filter_desis
-from EnMAP import read_EnMAP,EnMAP_to_image
+from EnMAP import read_EnMAP,EnMAP_to_image,extract_EnMAP,filter_EnMAP
 from emit import (
     emit_to_image,
     read_emit,
