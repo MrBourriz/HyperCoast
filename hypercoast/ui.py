@@ -17,7 +17,7 @@ from pace import extract_pace
 from desis import extract_desis
 from neon import extract_neon
 from aviris import extract_aviris
-from EnMAP import extract_EnMAP
+from EnMAP import extract_enmap
 from common import extract_spectral
 
 

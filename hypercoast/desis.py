@@ -50,6 +50,9 @@ def read_desis(
 
     return dataset
 
+filepath=r'D:\PhD_Thesis\testoo\desis.tif'
+dataset=read_desis(filepath)
+print(dataset)
 
 def desis_to_image(
     dataset: Union[xr.Dataset, str],
@@ -115,6 +118,7 @@ def extract_desis(ds: xr.Dataset, lat: float, lon: float) -> xr.DataArray:
     )
 
     return da
+
 
 
 def filter_desis(
